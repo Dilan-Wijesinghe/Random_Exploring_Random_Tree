@@ -22,13 +22,13 @@ class RRT:
     def expand(self):
         G = []             # G is a list of vertices
         G.append(self.q_init) # Initialize G with q_init
-        # for i in range(0,self.K): # Repeat K times
-        #     q_rand = self.rand_config() # Generates a rand pos in D
+        for i in range(0,self.K): # Repeat K times
+            q_rand = self.rand_config() # Generates a rand pos in D
         #     q_near = self.nearest_vertex(q_rand, G) # Find closest node
         #     q_new = self.new_config(q_near, q_rand)
         #     G.append(q_new)
         #     # Add a vertex between q_near and q_new (Built-in to new_config)
-        # return G
+        return G
 
     def rand_config(self):
         # Generate Node with random position in D
@@ -69,17 +69,22 @@ class RRT:
         return np.sqrt(vector.dot(vector))
 
     def grow_tree(self, Graph):
-        points = []
+        x = []
+        y = []
         for node in Graph:
-            points.append(node.pos)
-        points = np.array(points)
-        plt.scatter(points[0], points[1])
+            x.append(node.pos[0])
+            y.append(node.pos[1])
+        x = np.array(x)
+        y = np.array(y)
+        # print(points)
+        plt.scatter(x,y)
         plt.show()
 
 
 
 TestRRT = RRT(K=10,delta=1,D=np.array([100,100]),q_init=Node(pos=np.array([50,50])))
-Graph = TestRRT.expand()
+GraphTest = TestRRT.expand()
+TestRRT.grow_tree(Graph=GraphTest)
 
 # Magnitude Tests
 # vec = np.array([4,3])
@@ -88,6 +93,7 @@ Graph = TestRRT.expand()
 
 # Plotting Test
 # points = (np.random.rand(100), np.random.rand(100))
+# print("Point Size:", points)
 # plt.scatter(points[0], points[1])
 # plt.show()
 
