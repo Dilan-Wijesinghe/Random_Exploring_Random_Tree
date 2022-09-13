@@ -24,7 +24,7 @@ class RRT:
         G.append(self.q_init) # Initialize G with q_init
         for i in range(0,self.K): # Repeat K times
             q_rand = self.rand_config() # Generates a rand pos in D
-        #     q_near = self.nearest_vertex(q_rand, G) # Find closest node
+            q_near = self.nearest_vertex(q_rand, G) # Find closest node
         #     q_new = self.new_config(q_near, q_rand)
         #     G.append(q_new)
         #     # Add a vertex between q_near and q_new (Built-in to new_config)
@@ -32,8 +32,9 @@ class RRT:
 
     def rand_config(self):
         # Generate Node with random position in D
-        rand_pos = Node(pos = (random.randint(0,self.D[0]), random.randint(0,self.D[1])))
-        print(type(rand_pos)) # Confirming Tuple Type
+        rand_pos = Node(pos = (random.uniform(0,self.D[0]), random.uniform(0,self.D[1])))
+        print(type(rand_pos)) # Confirming Node Type
+        print(rand_pos.pos)
         return rand_pos
 
     def nearest_vertex(self, GivenNode, Graph):
