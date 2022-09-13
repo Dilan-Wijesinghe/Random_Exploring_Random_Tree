@@ -25,27 +25,28 @@ class RRT:
         for i in range(0,self.K): # Repeat K times
             q_rand = self.rand_config() # Generates a rand pos in D
             q_near = self.nearest_vertex(q_rand, G) # Find closest node
-        #     q_new = self.new_config(q_near, q_rand)
-        #     G.append(q_new)
-        #     # Add a vertex between q_near and q_new (Built-in to new_config)
+            q_new = self.new_config(q_near, q_rand)
+            G.append(q_new)
+            # Add a vertex between q_near and q_new (Built-in to new_config)
         return G
 
     def rand_config(self):
         # Generate Node with random position in D
         rand_pos = Node(pos = (random.uniform(0,self.D[0]), random.uniform(0,self.D[1])))
-        print(type(rand_pos)) # Confirming Node Type
-        print(rand_pos.pos)
+        # print(type(rand_pos)) # Confirming Node Type
+        # print(rand_pos.pos)
         return rand_pos
 
-    def nearest_vertex(self, GivenNode, Graph):
+    def nearest_vertex(self, GivenNode: Node, Graph):
         # Graph is a list of Nodes
         pos = GivenNode.pos # Gets positon as np.array
         dists = []
         for node in Graph:
-            euc_dist = LA.norm(pos - node)
+            print("Found a Node!:", node.pos)
+            euc_dist = LA.norm(pos - node.pos)
             dists.append(euc_dist)
         dists = np.array(dists)
-        
+     
         # print("Index is:", np.argmin(dists))
         # print("Node is:", Graph[np.argmin(dists)].pos) # Prints pos of nearest node
         return Graph[np.argmin(dists)] # Should return Node with smallest distance
@@ -58,13 +59,14 @@ class RRT:
         dir = dir / self.mag(dir) # Get Unit Vector
         dir = dir * self.delta # Multiply by Delta
 
-        print("Vector to add:", dir)
-        
+        # print("Vector to add:", dir)
+        new_coords = NearestNode.pos + dir
+        print(new_coords)
         # Returns new np.array with shape (x,y)
         # Move delta many spaces towards direction 
-        Child = Node(p_node=NearestNode, pos=np.array(dir)) # Generate new node, NearestNode as parent
+        Child = Node(p_node=NearestNode, pos=np.array(new_coords)) # Generate new node, NearestNode as parent
         NearestNode.c_node = Child
-        return NearestNode, Child
+        return Child
     
     def mag(self,vector: np.array):
         return np.sqrt(vector.dot(vector))
