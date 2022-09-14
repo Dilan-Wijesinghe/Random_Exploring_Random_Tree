@@ -38,19 +38,20 @@ class Obstacles:
             numer = np.abs(A*circ.c[0] + B*circ.c[1] + C) # |a*x_c + b*y_c + c|
             denom = np.sqrt((A)**2 + (B)**2) # sqrt(a^2 + b^2)
             d = numer / denom
-            print(f"d is {d}")
+            # print(f"d is {d}")
             if d <= circ.r:
                 collide = True
         return collide
 
 
 class RRT:
-    def __init__(self,K,delta,D,q_init, obstacles):
+    def __init__(self,K,delta,D,q_init,q_end,obstacles):
         self.K = K # Num Vertices
         self.delta = delta # Incremental Dist
         self.D = D # Planning Domain   
         self.q_init = q_init # Inital Position/Configuration (Node type)
         self.obstacles = obstacles # Initialize RRT with some obstacles
+        self.goal = q_end # End Location we want to go!
 
     def expand(self):
         G = []             # G is a list of vertices
@@ -63,6 +64,7 @@ class RRT:
                 # Add a vertex between q_near and q_new (Built-in to new_config)
                 # print(f"Adding Vertex: {i}")
                 G.append(q_new)
+                self.checkGoal()
         return G
 
     def rand_config(self):
@@ -103,12 +105,23 @@ class RRT:
             # Then there E an obstacle. Do NOT make a child.
             print("Cannot Make Child, there is an Obstacle in the way!")
             collide = True
-            return
+            Child = Node()
+            return Child, collide
 
         Child = Node(p_node=NearestNode, pos=np.array(new_coords)) # Generate new node, NearestNode as parent
         NearestNode.c_node = Child
         # print(f"My child is: {NearestNode.c_node.pos}")
         return Child, collide
+    
+    def checkGoal(q_new):
+        # TODO: checkGoal should check if the goal is within a certain radius (size delta) away from
+        # the newest vertex, q_new
+        x = goal[0]
+        y = goal[1]
+        g = -1* q_new.pos[0]
+        f = -1* q_new.pos[1]
+        return 0 
+
     
     def mag(self,vector: np.array):
         return np.sqrt(vector.dot(vector))
@@ -153,22 +166,24 @@ class RRT:
 
 # -------------------------------------------------------------------------------------------------
 # Create Obstacles
-circle1 = Circle((10,10),10)
-circle2 = Circle((90,70),5)
+circle1 = Circle((45,39),10) # Can change colors if wanted
+circle2 = Circle((55,56),5)
 circles = [circle1, circle2]
 Obs = Obstacles(circles=circles)
+goal = np.array([30,70])
 
-p1 = np.array([96,70])
-p2 = np.array([87,75])
-p3 = np.array([90,70])
-p4 = np.array([96,75])
+# Collision Tests
+# p1 = np.array([96,70])
+# p2 = np.array([87,75])
+# p3 = np.array([90,70])
+# p4 = np.array([96,75])
 
-if Obs.collision(p1=p2, p2=p4) == True:
-    print("Collision Exists!")
+# if Obs.collision(p1=p2, p2=p4) == True:
+#     print("Collision Exists!")
 
-# TestRRT = RRT(K=100,delta=1,D=np.array([100,100]),q_init=Node(pos=np.array([50,50])), obstacles=Obs)
-# GraphTest = TestRRT.expand()
-# TestRRT.grow_tree(Graph=GraphTest)
+TestRRT = RRT(K=500,delta=1,D=np.array([100,100]),q_init=Node(pos=np.array([50,50])),q_end=goal, obstacles=Obs)
+GraphTest = TestRRT.expand()
+TestRRT.grow_tree(Graph=GraphTest)
 
 # not every node has a child, but every node does have a parent
 # for node in GraphTest:
@@ -184,4 +199,4 @@ if Obs.collision(p1=p2, p2=p4) == True:
 # print("Point Size:", points)
 # plt.scatter(points[0], points[1])
 # plt.show()
-
+9
