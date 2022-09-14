@@ -5,12 +5,27 @@ import numpy as np
 from numpy import linalg as LA
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from matplotlib.collections import LineCollection
 
 class Node:
     def __init__(self,p_node=np.zeros(2),c_node=np.zeros(2),pos=np.zeros(2)):
         self.p_node = p_node # Position of Parent Node
         self.c_node = c_node # Position of Child Node
         self.pos = pos # Position of this Node
+    
+class Circle:
+    def __init__(self,c,r):
+        self.c = c # np.array of (x,y)
+        self.r = r # radius of circle
+
+    def makeCircle(self):
+        return 0
+
+
+# class Obstacles:
+#     def __init__(self):
+#         # Class Variables
+
 
 class RRT:
     def __init__(self,K,delta,D,q_init):
@@ -42,7 +57,7 @@ class RRT:
         pos = GivenNode.pos # Gets positon as np.array
         dists = []
         for node in Graph:
-            print("Found a Node!:", node.pos)
+            # print("Found a Node!:", node.pos)
             euc_dist = LA.norm(pos - node.pos)
             dists.append(euc_dist)
         dists = np.array(dists)
@@ -61,33 +76,62 @@ class RRT:
 
         # print("Vector to add:", dir)
         new_coords = NearestNode.pos + dir
-        print(new_coords)
+        # print(new_coords)
         # Returns new np.array with shape (x,y)
         # Move delta many spaces towards direction 
         Child = Node(p_node=NearestNode, pos=np.array(new_coords)) # Generate new node, NearestNode as parent
         NearestNode.c_node = Child
+        # print(f"My child is: {NearestNode.c_node.pos}")
         return Child
     
     def mag(self,vector: np.array):
         return np.sqrt(vector.dot(vector))
 
+    def over_the_edge(self, node):
+        line = ([node.p_node.pos[0], node.p_node.pos[1]], [node.pos[0], node.pos[1]])
+        return line
+
     def grow_tree(self, Graph):
         x = []
         y = []
+        segs = []
+        cnt = 0
         for node in Graph:
+            if cnt > 0:
+                print(node.p_node.pos)
+                line = self.over_the_edge(node)
+                segs.append(line)
+                # print(f"My line is : {line}")
             x.append(node.pos[0])
             y.append(node.pos[1])
+            cnt += 1
+        
+        f, ax = plt.subplots()
+        # ax.set_xlim(0,self.D[0])
+        # ax.set_ylim(0,self.D[1])
+        line_segs = LineCollection(segs) # Style if you want here
+        ax.add_collection(line_segs)
+
+        circle1 = plt.Circle((10,10),10)
+        ax.add_patch(circle1)
+        ax.set_aspect('equal')
         x = np.array(x)
         y = np.array(y)
         # print(points)
-        plt.scatter(x,y)
+        plt.scatter(x,y) # Make Circles Smaller
         plt.show()
+    
 
-
-
-TestRRT = RRT(K=10,delta=1,D=np.array([100,100]),q_init=Node(pos=np.array([50,50])))
+TestRRT = RRT(K=100,delta=1,D=np.array([100,100]),q_init=Node(pos=np.array([50,50])))
 GraphTest = TestRRT.expand()
 TestRRT.grow_tree(Graph=GraphTest)
+
+
+
+# not every node has a child, but every node does have a parent
+# for node in GraphTest:
+#     print(f"These are my children! {node.p_node}")
+
 
 # Magnitude Tests
 # vec = np.array([4,3])
