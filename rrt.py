@@ -1,7 +1,7 @@
 # Imports 
 from itertools import combinations_with_replacement
 from pickletools import uint8
-import random 
+import random
 import numpy as np
 from numpy import linalg as LA
 import matplotlib as mpl
@@ -29,12 +29,19 @@ class Obstacles:
     
     def collision(self, p1, p2):
         # Checks for a collision between 
-        # a = 
-        # b = 
-        # c = 
-        # no_collide = True
-        # for circle in circles: # Check for a collision between each circle
-        return False
+        # p1 = [x1,y1], p2 = [x2,y2]
+        A = p1[1] - p2[1] # y1 - y2
+        B = p2[0] - p1[0] # x2 - x1
+        C = (p1[0] - p2[0])*p1[1] + (p2[1] - p1[1])*p1[0] # (x1 - x2)y1 + (y2 - y1)x1
+        collide = False
+        for circ in self.circles: # Check for a collision between each circle
+            numer = np.abs(A*circ.c[0] + B*circ.c[1] + C) # |a*x_c + b*y_c + c|
+            denom = np.sqrt((A)**2 + (B)**2) # sqrt(a^2 + b^2)
+            d = numer / denom
+            print(f"d is {d}")
+            if d <= circ.r:
+                collide = True
+        return collide
 
 
 class RRT:
@@ -54,7 +61,7 @@ class RRT:
             q_new, collide = self.new_config(q_near, q_rand)
             if not collide:
                 # Add a vertex between q_near and q_new (Built-in to new_config)
-                print(f"Adding Vertex: {i}")
+                # print(f"Adding Vertex: {i}")
                 G.append(q_new)
         return G
 
@@ -89,7 +96,7 @@ class RRT:
 
         # print("Vector to add:", dir)
         new_coords = NearestNode.pos + dir
-        # print(new_coords)
+        # print(type(new_coords), type(NearestNode.pos)) # Checking for numpy array type
 
         # TODO: Check if a collision occurs with this new_coords point!
         if self.obstacles.collision(NearestNode.pos, new_coords): # if True 
@@ -117,7 +124,7 @@ class RRT:
         cnt = 0
         for node in Graph:
             if cnt > 0:
-                print(node.p_node.pos)
+                # print(node.p_node.pos)
                 line = self.over_the_edge(node)
                 segs.append(line)
                 # print(f"My line is : {line}")
@@ -144,25 +151,28 @@ class RRT:
         plt.show()
     
 
-
-
+# -------------------------------------------------------------------------------------------------
 # Create Obstacles
 circle1 = Circle((10,10),10)
 circle2 = Circle((90,70),5)
 circles = [circle1, circle2]
 Obs = Obstacles(circles=circles)
 
-TestRRT = RRT(K=100,delta=1,D=np.array([100,100]),q_init=Node(pos=np.array([50,50])), obstacles=Obs)
-GraphTest = TestRRT.expand()
-TestRRT.grow_tree(Graph=GraphTest)
+p1 = np.array([96,70])
+p2 = np.array([87,75])
+p3 = np.array([90,70])
+p4 = np.array([96,75])
 
+if Obs.collision(p1=p2, p2=p4) == True:
+    print("Collision Exists!")
 
-
+# TestRRT = RRT(K=100,delta=1,D=np.array([100,100]),q_init=Node(pos=np.array([50,50])), obstacles=Obs)
+# GraphTest = TestRRT.expand()
+# TestRRT.grow_tree(Graph=GraphTest)
 
 # not every node has a child, but every node does have a parent
 # for node in GraphTest:
 #     print(f"These are my children! {node.p_node}")
-
 
 # Magnitude Tests
 # vec = np.array([4,3])
