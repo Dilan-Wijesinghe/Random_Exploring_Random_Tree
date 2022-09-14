@@ -1,4 +1,5 @@
 # Imports 
+from itertools import combinations_with_replacement
 from pickletools import uint8
 import random 
 import numpy as np
@@ -15,24 +16,34 @@ class Node:
     
 class Circle:
     def __init__(self,c,r):
-        self.c = c # np.array of (x,y)
+        self.c = c # tuple of (x,y)
         self.r = r # radius of circle
 
     def makeCircle(self):
-        return 0
+        return plt.Circle(self.c,self.r)
 
-
-# class Obstacles:
-#     def __init__(self):
-#         # Class Variables
+class Obstacles:
+    def __init__(self, circles):
+        # Class Variables 
+        self.circles = circles # List of Circles
+    
+    def collision(self, p1, p2):
+        # Checks for a collision between 
+        # a = 
+        # b = 
+        # c = 
+        # no_collide = True
+        # for circle in circles: # Check for a collision between each circle
+        return False
 
 
 class RRT:
-    def __init__(self,K,delta,D,q_init):
+    def __init__(self,K,delta,D,q_init, obstacles):
         self.K = K # Num Vertices
         self.delta = delta # Incremental Dist
         self.D = D # Planning Domain   
         self.q_init = q_init # Inital Position/Configuration (Node type)
+        self.obstacles = obstacles # Initialize RRT with some obstacles
 
     def expand(self):
         G = []             # G is a list of vertices
@@ -40,9 +51,11 @@ class RRT:
         for i in range(0,self.K): # Repeat K times
             q_rand = self.rand_config() # Generates a rand pos in D
             q_near = self.nearest_vertex(q_rand, G) # Find closest node
-            q_new = self.new_config(q_near, q_rand)
-            G.append(q_new)
-            # Add a vertex between q_near and q_new (Built-in to new_config)
+            q_new, collide = self.new_config(q_near, q_rand)
+            if not collide:
+                # Add a vertex between q_near and q_new (Built-in to new_config)
+                print(f"Adding Vertex: {i}")
+                G.append(q_new)
         return G
 
     def rand_config(self):
@@ -69,7 +82,7 @@ class RRT:
     
     """ Will return a Node with the new configuration """
     def new_config(self, NearestNode, RandomNode):
-        # self.delta needed here
+        collide = False
         dir = RandomNode.pos - NearestNode.pos # Element-wise subtraction of nodes 
         dir = dir / self.mag(dir) # Get Unit Vector
         dir = dir * self.delta # Multiply by Delta
@@ -77,12 +90,18 @@ class RRT:
         # print("Vector to add:", dir)
         new_coords = NearestNode.pos + dir
         # print(new_coords)
-        # Returns new np.array with shape (x,y)
-        # Move delta many spaces towards direction 
+
+        # TODO: Check if a collision occurs with this new_coords point!
+        if self.obstacles.collision(NearestNode.pos, new_coords): # if True 
+            # Then there E an obstacle. Do NOT make a child.
+            print("Cannot Make Child, there is an Obstacle in the way!")
+            collide = True
+            return
+
         Child = Node(p_node=NearestNode, pos=np.array(new_coords)) # Generate new node, NearestNode as parent
         NearestNode.c_node = Child
         # print(f"My child is: {NearestNode.c_node.pos}")
-        return Child
+        return Child, collide
     
     def mag(self,vector: np.array):
         return np.sqrt(vector.dot(vector))
@@ -111,10 +130,13 @@ class RRT:
         # ax.set_ylim(0,self.D[1])
         line_segs = LineCollection(segs) # Style if you want here
         ax.add_collection(line_segs)
-
-        circle1 = plt.Circle((10,10),10)
-        ax.add_patch(circle1)
+    
+        # Circles!
+        for circle in self.obstacles.circles:
+            circle_to_plot = circle.makeCircle()
+            ax.add_patch(circle_to_plot)
         ax.set_aspect('equal')
+
         x = np.array(x)
         y = np.array(y)
         # print(points)
@@ -122,9 +144,18 @@ class RRT:
         plt.show()
     
 
-TestRRT = RRT(K=100,delta=1,D=np.array([100,100]),q_init=Node(pos=np.array([50,50])))
+
+
+# Create Obstacles
+circle1 = Circle((10,10),10)
+circle2 = Circle((90,70),5)
+circles = [circle1, circle2]
+Obs = Obstacles(circles=circles)
+
+TestRRT = RRT(K=100,delta=1,D=np.array([100,100]),q_init=Node(pos=np.array([50,50])), obstacles=Obs)
 GraphTest = TestRRT.expand()
 TestRRT.grow_tree(Graph=GraphTest)
+
 
 
 
