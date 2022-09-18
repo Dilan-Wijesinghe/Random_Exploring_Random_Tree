@@ -2,11 +2,44 @@
 from itertools import combinations_with_replacement
 from pickletools import uint8
 import random
+from turtle import color
 import numpy as np
 from numpy import linalg as LA
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
+import matplotlib.colors as colors
+
+def checkSpawnCollision(c,r,node):
+    h = c[0]
+    k = c[1]
+    x = node[0]
+    y = node[1]
+    d = np.sqrt((h-x)**2 + (k-y)**2)
+    return d <= r # If d <= radius, then it is within the SpawnCircle range, must remake circle
+
+def spawnCircle(start_node, goal_node):
+    circleMade = False
+    while not circleMade:
+        c = [random.uniform(0,100), random.uniform(0,100)]
+        r = random.uniform(1,20)
+        if not checkSpawnCollision(c,r,node=start_node.pos):
+            if not checkSpawnCollision(c,r,node=goal_node):
+                newCircle = Circle(c=c, r=r) 
+                circleMade = True
+    return newCircle
+
+def randomLoc():
+    # Spawns a Random Start and Goal Location
+    validLocs = False
+    while not validLocs:
+        goal_loc = [random.uniform(0,100), random.uniform(0,100)]
+        start_loc = [random.uniform(0,100), random.uniform(0,100)]
+        if goal_loc != start_loc:
+            validLocs = True
+    
+    return goal_loc, start_loc
+
 
 class Node:
     def __init__(self,p_node=np.zeros(2),c_node=np.zeros(2),pos=np.zeros(2)):
@@ -20,7 +53,7 @@ class Circle:
         self.r = r # radius of circle
 
     def makeCircle(self):
-        return plt.Circle(self.c,self.r)
+        return plt.Circle(self.c,self.r) # Plots the Circle
 
 class Obstacles:
     def __init__(self, circles):
@@ -52,6 +85,7 @@ class RRT:
         self.q_init = q_init # Inital Position/Configuration (Node type)
         self.obstacles = obstacles # Initialize RRT with some obstacles
         self.goal = q_end # End Location we want to go!
+        self.path_to_goal = []
 
     def expand(self):
         G = []             # G is a list of vertices
@@ -64,7 +98,15 @@ class RRT:
                 # Add a vertex between q_near and q_new (Built-in to new_config)
                 # print(f"Adding Vertex: {i}")
                 G.append(q_new)
-                self.checkGoal()
+                if self.checkGoal(q_new):
+                    print("Goal has been reached!")
+                    # Start the Tree
+                    
+                    self.path_to_goal.append(Node(p_node=Node(pos=q_new.pos), pos=self.goal)) # Append Goal, parent is q_new
+                    print("first node", self.path_to_goal[0].pos)
+                    self.makePath(q_new)
+                    self.grow_tree(G, goal_found=True)
+                    return G
         return G
 
     def rand_config(self):
@@ -103,7 +145,7 @@ class RRT:
         # TODO: Check if a collision occurs with this new_coords point!
         if self.obstacles.collision(NearestNode.pos, new_coords): # if True 
             # Then there E an obstacle. Do NOT make a child.
-            print("Cannot Make Child, there is an Obstacle in the way!")
+            # print("Cannot Make Child, there is an Obstacle in the way!")
             collide = True
             Child = Node()
             return Child, collide
@@ -113,15 +155,33 @@ class RRT:
         # print(f"My child is: {NearestNode.c_node.pos}")
         return Child, collide
     
-    def checkGoal(q_new):
+    def checkGoal(self, q_new):
         # TODO: checkGoal should check if the goal is within a certain radius (size delta) away from
         # the newest vertex, q_new
-        x = goal[0]
-        y = goal[1]
-        g = -1* q_new.pos[0]
-        f = -1* q_new.pos[1]
-        return 0 
+        h = self.goal[0]
+        k = self.goal[1]
+        x = q_new.pos[0]
+        y = q_new.pos[1]
+        # radius = self.delta
+        radius = 10
+        d = np.sqrt((h-x)**2 + (k-y)**2)
+        return d <= radius # If d <= radius, then it is near the goal
 
+    def makePath(self, q_new):
+        # Return Nothing, since we are writing to path_to_goal directly
+        currNode = q_new
+        start_found = False
+        # self.path_to_goal.append(Node(pos=self.goal)) # Skip this since we did it before calling function
+        while not start_found:
+            if (currNode.p_node.pos == self.q_init.pos).all():
+                print("Start is Found!")
+                self.path_to_goal.append(currNode)
+                # self.path_to_goal.append(currNode.p_node)
+                start_found = True
+            else:
+                self.path_to_goal.append(currNode)
+                currNode = currNode.p_node
+        return 
     
     def mag(self,vector: np.array):
         return np.sqrt(vector.dot(vector))
@@ -130,14 +190,13 @@ class RRT:
         line = ([node.p_node.pos[0], node.p_node.pos[1]], [node.pos[0], node.pos[1]])
         return line
 
-    def grow_tree(self, Graph):
+    def grow_tree(self, Graph, goal_found=False):
         x = []
         y = []
         segs = []
         cnt = 0
         for node in Graph:
             if cnt > 0:
-                # print(node.p_node.pos)
                 line = self.over_the_edge(node)
                 segs.append(line)
                 # print(f"My line is : {line}")
@@ -145,32 +204,54 @@ class RRT:
             y.append(node.pos[1])
             cnt += 1
         
+        path_segs = []
+        path_x = []
+        path_y = []
+        if goal_found:
+            print("Goal Found! Printing Path now")
+            for node in self.path_to_goal:
+                path_line = self.over_the_edge(node)
+                print(path_line)
+                path_segs.append(path_line)
+                path_x.append(node.pos[0])
+                path_y.append(node.pos[1])
+                
+        
         f, ax = plt.subplots()
-        # ax.set_xlim(0,self.D[0])
-        # ax.set_ylim(0,self.D[1])
-        line_segs = LineCollection(segs) # Style if you want here
+        # Line Collections, for connecting Vertices
+        DarkOg = colors.to_rgb('darkorange')
+        line_segs = LineCollection(segs, colors=DarkOg) # Style if you want here
         ax.add_collection(line_segs)
+        path_line_segs = LineCollection(path_segs, colors=DarkOg)
+        ax.add_collection(path_line_segs)
     
         # Circles!
         for circle in self.obstacles.circles:
             circle_to_plot = circle.makeCircle()
             ax.add_patch(circle_to_plot)
         ax.set_aspect('equal')
+        Red = colors.to_rgb('red')
+        ax.plot(goal[0], goal[1], marker="o", color=Red)
 
         x = np.array(x)
         y = np.array(y)
+        # path_x = np.array(path_x)
+        # path_y = np.array(path_x)
         # print(points)
         plt.scatter(x,y) # Make Circles Smaller
         plt.show()
     
 
 # -------------------------------------------------------------------------------------------------
-# Create Obstacles
-circle1 = Circle((45,39),10) # Can change colors if wanted
-circle2 = Circle((55,56),5)
-circles = [circle1, circle2]
-Obs = Obstacles(circles=circles)
-goal = np.array([30,70])
+
+
+# node = Node(p_node=Node(pos=np.array([50,50])), pos=([3,4]))
+# print(node.p_node.pos)
+# q_init = Node(pos=np.array([51,50]))
+# print(type(node.p_node.pos), type(q_init.pos))
+
+# if (node.p_node.pos==q_init.pos).all():
+#     print("True")
 
 # Collision Tests
 # p1 = np.array([96,70])
@@ -181,9 +262,27 @@ goal = np.array([30,70])
 # if Obs.collision(p1=p2, p2=p4) == True:
 #     print("Collision Exists!")
 
-TestRRT = RRT(K=500,delta=1,D=np.array([100,100]),q_init=Node(pos=np.array([50,50])),q_end=goal, obstacles=Obs)
+# Create Obstacles
+# TODO: Randomize Obstacles, Start, and Goal
+# Make Sure Obstacles do not contain Start and Goal.
+goal_loc, start_loc = randomLoc()
+goal = goal_loc
+start = Node(pos=np.array(start_loc))
+
+circle1 = spawnCircle(start, goal)
+circle2 = spawnCircle(start, goal)
+
+# circle1 = Circle((45,39),10) # Can change colors if wanted
+# circle2 = Circle((55,56),5)
+circles = [circle1, circle2]
+Obs = Obstacles(circles=circles)
+
+# start = Node(pos=np.array([50,50]))
+# goal = np.array([30,70])
+
+TestRRT = RRT(K=1000,delta=1,D=np.array([100,100]),q_init=start,q_end=goal, obstacles=Obs)
 GraphTest = TestRRT.expand()
-TestRRT.grow_tree(Graph=GraphTest)
+# TestRRT.grow_tree(Graph=GraphTest)
 
 # not every node has a child, but every node does have a parent
 # for node in GraphTest:
@@ -199,4 +298,3 @@ TestRRT.grow_tree(Graph=GraphTest)
 # print("Point Size:", points)
 # plt.scatter(points[0], points[1])
 # plt.show()
-9
